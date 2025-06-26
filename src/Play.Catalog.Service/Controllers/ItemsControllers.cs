@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Mvc;
 using Play.Catalog.Service.Dtos;
 
@@ -14,55 +15,34 @@ public class ItemsController : ControllerBase
         _logger = logger;
     }
 
+    private static readonly List<ItemDto> Items = new List<ItemDto>([
+        new ItemDto(Guid.NewGuid(), "Potion", "Description for item 1", 100, DateTimeOffset.UtcNow),
+        new ItemDto(Guid.NewGuid(), "Antidote", "Description for item 2", 200, DateTimeOffset.UtcNow),
+        new ItemDto(Guid.NewGuid(), "Sword", "Description for item 3", 300, DateTimeOffset.UtcNow)
+    ]);
+
     [HttpGet]
-    public async Task<IEnumerable<ItemDto>> GetItems()
+    public IEnumerable<ItemDto> GetItems()
     {
-        _logger.LogInformation("Getting items...");
-
-        await Task.Delay(10);
-
-        // return Enumerable.Range(1, 10).Select(index => new ItemDto(
-        //     Guid.NewGuid(),
-        //     $"Item {index}",
-        //     $"Description for item {index}",
-        //     Random.Shared.Next(10, 1000),
-        //     DateTimeOffset.UtcNow));
-
-        return Enumerable.Range(1, 10).Select(i => new ItemDto
-        (
-            Guid.NewGuid(),
-            $"Item {i}", $"Description for item {i}",
-            Random.Shared.Next(200, 5000),
-            DateTimeOffset.UtcNow
-        ));
+        return Items;
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<ItemDto> GetItem(Guid id)
+    [HttpGet("{id}")]
+    public ActionResult<ItemDto> GetItemById(Guid id)
     {
-        _logger.LogInformation("Getting item with id {Id}...", id);
+        var item = Items.SingleOrDefault(i => i.Id == id);
+        if (item == null)
+        {
+            return NotFound();
+        }
 
-        await Task.Delay(10);
-
-        return new ItemDto
-        (
-            id,
-            $"Item {id}",
-            $"Description for item {id}",
-            Random.Shared.Next(200, 5000),
-            DateTimeOffset.UtcNow
-        );
+        return item;
     }
 
     [HttpPost]
-    public async Task<ActionResult<ItemDto>> createItem(CreateItemDto createItemDto)
+    public ActionResult<ItemDto> CreateItem(CreateItemDto createItemDto)
     {
-        _logger.LogInformation("Creating item...");
-
-        await Task.Delay(10);
-
-        var itemDto = new ItemDto
-        (
+        var newItem = new ItemDto(
             Guid.NewGuid(),
             createItemDto.Name,
             createItemDto.Description,
@@ -70,8 +50,23 @@ public class ItemsController : ControllerBase
             DateTimeOffset.UtcNow
         );
 
-        return CreatedAtAction(nameof(GetItem), new { id = itemDto.Id }, itemDto);
-    }
-    
+        Items.Add(newItem);
 
+        return CreatedAtAction(nameof(GetItemById), new { id = newItem.Id }, newItem);
+    }
+
+    [HttpDelete("{id}")]
+    public ActionResult DeleteById(Guid id)
+    {
+        if (!Items.Exists(i => i.Id == id))
+        {
+            return NotFound();
+        }
+
+
+        Items.RemoveAll(item => item.Id == id);
+
+        IEnumerable<object> objects = from i in Items orderby i.Id select i;
+        return NoContent();
+    }
 }
