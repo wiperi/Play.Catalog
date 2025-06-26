@@ -1,5 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Any;
 using Play.Catalog.Service.Dtos;
 
 namespace Play.Catalog.Service.Controllers;
@@ -30,6 +31,23 @@ public class ItemsController : ControllerBase
     [HttpGet("{id}")]
     public ActionResult<ItemDto> GetItemById(Guid id)
     {
+        var item = Items.Find(i => i.Id == id);
+        if (item == null)
+        {
+            return NotFound();
+        }
+
+        var updatedItem = item with
+        {
+            Name = updateItemDto.Name,
+            Description = updateItemDto.Description,
+            Price = updateItemDto.Price
+        };
+
+        var index = Items.FindIndex(i => i.Id == item.Id);
+        Items[index] = updatedItem;
+
+        return NoContent();
         var item = Items.SingleOrDefault(i => i.Id == id);
         if (item == null)
         {
